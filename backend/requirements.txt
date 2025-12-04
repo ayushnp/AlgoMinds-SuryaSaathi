@@ -1,0 +1,29 @@
+# --- Core Web Framework and Asynchronous Components ---
+fastapi                     # High-performance web framework
+uvicorn[standard]           # ASGI server to run FastAPI
+pydantic                    # Data validation and configuration management
+pydantic-settings           # For loading environment variables (.env)
+motor                       # Asynchronous MongoDB driver (for Atlas)
+
+# --- Authentication and Security ---
+python-jose[cryptography]   # JSON Web Token (JWT) handling
+passlib[bcrypt]             # Secure password hashing
+
+# --- Utility and File Handling ---
+python-multipart            # To handle form data and file uploads (crucial for images)
+httpx                       # Asynchronous HTTP client (preferred for Sentinel Hub/PVWatts)
+Pillow                      # Python Imaging Library (for EXIF data and general image manipulation)
+
+# --- AI/ML and Specialized Analysis Tools ---
+# Note: These versions are known to be compatible.
+opencv-python               # Computer vision library (for Shadow Analysis)
+ultralytics==8.2.0          # YOLOv8 framework (latest stable for panel detection)
+easyocr                     # OCR tool (for serial number extraction)
+numpy                       # Fundamental library for numerical computing
+scipy                       # Scientific computing (used by pvlib and others)
+pandas                      # Data structures and analysis (useful for report generation)
+pytz                        # Timezone handling (critical for accurate solar analysis)
+pvlib                       # Solar position and PV system analysis (for shadow and expected generation)
+
+# --- AWS Storage (Optional, if using S3) ---
+# boto3
