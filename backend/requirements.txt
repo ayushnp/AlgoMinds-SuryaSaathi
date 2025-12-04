@@ -5,6 +5,9 @@ pydantic                    # Data validation and configuration management
 pydantic-settings           # For loading environment variables (.env)
 motor                       # Asynchronous MongoDB driver (for Atlas)
 
+# --- Email Validation (Required by pydantic.EmailStr) ---
+email-validator             # Necessary to resolve the ImportError
+
 # --- Authentication and Security ---
 python-jose[cryptography]   # JSON Web Token (JWT) handling
 passlib[bcrypt]             # Secure password hashing
