@@ -8,6 +8,8 @@
 *.sqlite
 /dist
 /build
+backend/storage/
+
 
 # ----------------------------------------------------------------------
 # PYTHON & FASTAPI BACKEND IGNORE (backend/)
