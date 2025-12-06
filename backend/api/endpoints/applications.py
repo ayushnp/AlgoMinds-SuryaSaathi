@@ -7,7 +7,6 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId # Import ObjectId for string conversion in queries
 
 # --- CORE IMPORTS ---
-# Note: Redundant 'from bson import ObjectId' before router has been removed.
 from core.database import get_application_collection
 from core.config import settings
 from api.dependencies import DBSession, CurrentUser
@@ -81,7 +80,7 @@ async def submit_application(
 
     # 3. Create the Database Document (Initial State)
     app_doc = {
-        # current_user.id is already the correct BSON type for insertion
+        # current_user.id is already the PyObjectId (BSON ID) instance.
         "user_id": current_user.id,
         "address": address,
         "registered_lat": registered_lat,
@@ -133,7 +132,7 @@ async def get_application_details(
 
     # Query by ID and ensure it belongs to the current user
     app_doc = await app_collection.find_one(
-        # FIX: current_user.id is already the correct type; removed redundant PyObjectId() wrapper.
+        # Use current_user.id directly, as it is the correct PyObjectId (BSON ID) instance.
         {"_id": app_object_id, "user_id": current_user.id}
     )
 

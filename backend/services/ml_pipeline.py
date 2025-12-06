@@ -28,8 +28,9 @@ async def calculate_expected_energy(lat: float, lon: float, system_capacity_kw: 
         'tilt': 20,  # Placeholder (should ideally be input by user)
         'azimuth': 180,  # Placeholder (South facing in Northern Hemisphere)
         'losses': 14.0,
-        'timeframe': 'annual',
-        'format': 'json'
+        'timeframe': 'monthly',
+        'format': 'json',
+
     }
 
     try:
