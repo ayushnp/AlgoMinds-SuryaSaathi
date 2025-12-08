@@ -1,0 +1,37 @@
+# Core Web Framework
+fastapi
+uvicorn[standard]
+python-multipart
+
+# Database
+motor
+pymongo
+
+# Authentication & Security
+python-jose[cryptography]
+passlib[bcrypt]
+bcrypt
+
+# Configuration & Environment
+pydantic
+pydantic-settings
+python-dotenv
+
+# HTTP Client
+httpx
+
+# Computer Vision & ML (Windows-compatible versions)
+numpy
+opencv-python
+pillow
+torch
+torchvision
+ultralytics
+easyocr
+
+# Solar Position Calculations
+pvlib
+pytz
+
+# CORS Middleware
+starlette
