@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { applicationAPI } from '../services/api';
 
-export default function ApplicationFormScreen({ navigation }) {
+export default function VerificationFormScreen({ navigation }) {
   const [formData, setFormData] = useState({
     applicant_name: '',
     address: '',

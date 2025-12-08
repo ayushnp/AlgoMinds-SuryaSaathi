@@ -3,9 +3,13 @@ from typing import List, Optional, Dict
 from bson import ObjectId
 from pydantic import BaseModel, Field, conint, confloat
 from models.user import PyObjectId  # Import custom ObjectId
+from datetime import datetime
+import pytz
 
 
-# --- Sub-Models for Verification Report ---
+# ---------------------------------------------------------------------
+# --- Sub-Models for Verification Report (No Change) --------------------
+# ---------------------------------------------------------------------
 
 class MetricScore(BaseModel):
     """Standard structure for a single verification metric."""
@@ -61,50 +65,61 @@ class VerificationReport(BaseModel):
     reasoning: str = Field(..., description="Summary explanation of the final decision.")
 
 
-# --- Main Application Model ---
+# ---------------------------------------------------------------------
+# --- Application Input Models (Step 1) --------------------------------
+# ---------------------------------------------------------------------
+
+class InitialApplicationCreate(BaseModel):
+    """
+    Input model for the detailed initial application before installation is verified.
+    This model includes all the detailed customer and system information.
+    """
+    applicant_name: str = Field(..., description="Full name of the primary applicant.")
+    applicant_phone: str = Field(..., description="Contact phone number of the applicant.")
+    address: str = Field(..., description="Installation address.")
+    system_capacity_kw: confloat(ge=0.1) = Field(..., description="Total system capacity in kW.")
+    declared_panel_count: conint(ge=1) = Field(..., description="Number of solar panels to be installed.")
+    installer_company: str = Field(..., description="Name of the installing company.")
+    installer_contact: str = Field(..., description="Contact information for the installer.")
+    preferred_verification_date: Optional[str] = Field(None, description="ISO date string for preferred verification.")
+
+
+# ---------------------------------------------------------------------
+# --- Main Application Data Model (Database Schema) ---------------------
+# ---------------------------------------------------------------------
 
 class ApplicationModel(BaseModel):
     """Model for a rooftop solar installation application in the database."""
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
     user_id: PyObjectId
 
-    # Installation Details
+    # Installation Details (Expanded fields from InitialApplicationCreate)
+    applicant_name: Optional[str] = None
+    applicant_phone: Optional[str] = None
     address: str
-    registered_lat: float
-    registered_lon: float
     system_capacity_kw: float
     declared_panel_count: conint(ge=1)
+    installer_company: Optional[str] = None
+    installer_contact: Optional[str] = None
+    preferred_verification_date: Optional[str] = None
 
-    # Photo Details
-    wide_rooftop_photo: PhotoMetadata
-    serial_number_photo: PhotoMetadata
-    inverter_photo: PhotoMetadata
+    # Verification Details (Only filled after the verification step)
+    registered_lat: Optional[float] = None
+    registered_lon: Optional[float] = None
+    wide_rooftop_photo: Optional[PhotoMetadata] = None
+    serial_number_photo: Optional[PhotoMetadata] = None
+    inverter_photo: Optional[PhotoMetadata] = None
 
     # Status and Verification
-    status: str = Field("submitted", description="e.g., submitted, verifying, approved, rejected, manual_review")
+    status: str = Field("initial_application", description="e.g., initial_application, verifying, approved, rejected, manual_review")
     submission_date: str = Field(default_factory=lambda: str(datetime.now(pytz.timezone('Asia/Kolkata'))))
 
     # Report (only present after verification is complete)
     verification_report: Optional[VerificationReport] = None
 
     class Config:
+        # Renamed in Pydantic V2 to validate_by_name, but kept for compatibility
         allow_population_by_field_name = True
         json_encoders = {ObjectId: str}
-        # Use str() for ObjectId to handle serialization to JSON
         # Allow extra fields temporarily if needed for future expansion
         extra = "allow"
-
-
-from datetime import datetime
-import pytz
-
-
-class ApplicationCreate(BaseModel):
-    """Input model for creating a new application."""
-    # File uploads will be handled separately in the FastAPI endpoint using UploadFile
-    # These fields are the JSON part of the form data
-    address: str
-    registered_lat: float
-    registered_lon: float
-    system_capacity_kw: float
-    declared_panel_count: conint(ge=1)

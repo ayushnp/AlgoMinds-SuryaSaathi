@@ -1,3 +1,5 @@
+// In frontend/app/services/api.js
+
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -22,6 +24,7 @@ apiClient.interceptors.request.use(
 );
 
 export const authAPI = {
+  // ... (keep existing register and login) ...
   register: async (userData) => {
     try {
       const response = await apiClient.post('/auth/register', userData);
@@ -60,18 +63,35 @@ export const authAPI = {
 };
 
 export const applicationAPI = {
-  create: async (applicationData) => {
+  // 1. NEW: Initial Application (sends JSON to /apply)
+  apply: async (applicationData) => {
     try {
-      const response = await apiClient.post('/applications/', applicationData);
+      const response = await apiClient.post('/applications/apply', applicationData);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
     }
   },
   
+  // 2. MODIFIED: Verification Submission (sends multipart/form-data to /submit)
+  submitVerification: async (formDataWithFiles) => { 
+    try {
+      const response = await apiClient.post('/applications/submit', formDataWithFiles, {
+        headers: {
+          'Content-Type': 'multipart/form-data', // IMPORTANT for file uploads
+        },
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  
+  // 3. Keep existing getAll method (assumes backend's /applications/ endpoint works)
   getAll: async () => {
     try {
-      const response = await apiClient.get('/applications/');
+      // NOTE: Update the backend's GET /applications/ endpoint logic to handle filtering by user ID if necessary.
+      const response = await apiClient.get('/applications/'); 
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;

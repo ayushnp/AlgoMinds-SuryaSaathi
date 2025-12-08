@@ -1,3 +1,5 @@
+// In frontend/app/screens/HomeScreen.js
+
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { removeToken } from '../utils/auth';
@@ -14,10 +16,20 @@ export default function HomeScreen({ navigation }) {
       
       <TouchableOpacity
         style={styles.card}
-        onPress={() => navigation.navigate('ApplicationForm')}
+        // CORRECTED: Navigate to the new InitialApplicationForm screen
+        onPress={() => navigation.navigate('InitialApplicationForm')} 
       >
         <Text style={styles.cardTitle}>New Application</Text>
-        <Text style={styles.cardDescription}>Submit a new solar subsidy application</Text>
+        <Text style={styles.cardDescription}>Submit the initial solar subsidy application details</Text>
+      </TouchableOpacity>
+      
+      {/* Optionally add a direct link to verification for existing applications */}
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() => navigation.navigate('VerificationForm')}
+      >
+        <Text style={styles.cardTitle}>Submit Verification Photos</Text>
+        <Text style={styles.cardDescription}>Upload post-installation photos using an existing Application ID</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -35,6 +47,7 @@ export default function HomeScreen({ navigation }) {
   );
 }
 
+// ... (keep existing styles) ...
 const styles = StyleSheet.create({
   container: {
     flex: 1,
