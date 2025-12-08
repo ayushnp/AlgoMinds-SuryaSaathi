@@ -1,7 +1,10 @@
+# In backend/services/satellite_analysis.py
+
 import httpx
 import numpy as np
 import cv2
 from typing import Tuple, Optional
+from functools import lru_cache  # <-- NEW: Import lru_cache
 
 from pathlib import Path
 
@@ -10,15 +13,26 @@ from ultralytics import YOLO
 from core.config import settings
 from models.application import MetricScore, SatelliteAnalysisResult
 
-# Initialize YOLO model (Load once globally for efficiency)
-# NOTE: Using the assumed permanent path for your trained model.
+# --- NEW: Lazy-loading function with caching ---
 CUSTOM_MODEL_PATH = "best.pt"
-try:
-    # Load your custom segmentation weights
-    YOLO_MODEL = YOLO(CUSTOM_MODEL_PATH)
-except Exception as e:
-    print(f"Warning: Could not load YOLO model: {e}")
-    YOLO_MODEL = None
+
+
+@lru_cache
+def get_yolo_model():
+    """
+    Loads the YOLO model only once, on first access, and caches the result.
+    This prevents memory spikes during application startup.
+    """
+    try:
+        # Load your custom segmentation weights
+        return YOLO(CUSTOM_MODEL_PATH)
+    except Exception as e:
+        print(f"Warning: Could not load YOLO model: {e}")
+        return None
+
+
+# --- END NEW ---
+
 
 SENTINEL_HUB_API_URL = "https://services.sentinel-hub.com/api/v1/"  # Placeholder base URL
 
@@ -55,6 +69,9 @@ def run_yolo_detection(image_content: bytes) -> Tuple[int, float, float]:
     Runs YOLOv11 segmentation model to detect panels and estimate area.
     Returns: (panel_count, avg_confidence, total_pv_area_sqm)
     """
+    # CORRECTED: Retrieve the model using the cached getter function
+    YOLO_MODEL = get_yolo_model()
+
     if YOLO_MODEL is None:
         return 0, 0.0, 0.0  # Return 0 for area on failure
 

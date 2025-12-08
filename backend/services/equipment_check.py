@@ -1,25 +1,40 @@
+# In backend/services/equipment_check.py
+
 import easyocr
 import io
 import cv2
 import numpy as np
 from typing import List, Optional, Tuple
+from functools import lru_cache  # <-- NEW: Import lru_cache
 
 from services.storage import get_file_content
 from models.application import MetricScore, EquipmentCheckResult
 
-# Initialize EasyOCR reader (Load once globally for efficiency)
-# NOTE: Ensure you have the necessary language models installed.
-try:
-    READER = easyocr.Reader(['en'], gpu=False)  # Use gpu=True if CUDA is configured
-except Exception as e:
-    print(f"Warning: Could not initialize EasyOCR reader: {e}")
-    READER = None
+
+# --- NEW: Lazy-loading function with caching ---
+
+@lru_cache
+def get_ocr_reader():
+    """
+    Loads the EasyOCR reader only once, on first access, and caches the result.
+    This prevents slow startup times.
+    """
+    try:
+        # Load the reader only when this function is called
+        return easyocr.Reader(['en'], gpu=False)  # Use gpu=True if CUDA is configured
+    except Exception as e:
+        print(f"Warning: Could not initialize EasyOCR reader: {e}")
+        return None
+
+
+# --- END NEW: Global model initialization removed ---
+
 
 # Placeholder ALMM Approved List (Indian Ministry of New and Renewable Energy)
 ALMM_APPROVED_LIST = {
     "SERIAL-123456": {"model": "PV-IND-A1", "manufacturer": "SolarTech India"},
     "SERIAL-987654": {"model": "IN-PRO-B2", "manufacturer": "PowerGen Corp"},
-     # Add more valid serial numbers here
+    # Add more valid serial numbers here
 }
 
 
@@ -27,6 +42,9 @@ def extract_serials_with_ocr(image_content: bytes) -> List[str]:
     """
     Runs EasyOCR on the close-up image to extract potential serial numbers.
     """
+    # CORRECTED: Retrieve the cached reader instance
+    READER = get_ocr_reader()
+
     if READER is None:
         return ["OCR_ERROR_READER_UNAVAILABLE"]
 
