@@ -1,3 +1,5 @@
+# In backend/api/dependencies.py
+
 from typing import Annotated
 from fastapi import Depends, HTTPException, status
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -47,4 +49,6 @@ async def get_current_user(user_id: Annotated[str, Depends(get_current_user_id)]
 
 # Reusable dependencies for endpoints
 DBSession = Annotated[AsyncIOMotorClient, Depends(get_db_client)]
-CurrentUser = Annotated[UserModel, Depends(get_current_user)]
+# FIX: The CurrentUser alias definition is removed to resolve a Pydantic V2 conflict
+# that caused the 500 error by mistaking the dependency for query parameters.
+# CurrentUser = Annotated[UserModel, Depends(get_current_user)]

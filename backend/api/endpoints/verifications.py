@@ -1,11 +1,14 @@
+# In backend/api/endpoints/verifications.py
+
 from fastapi import APIRouter, HTTPException, status, Depends
 from bson import ObjectId
 from typing import Annotated
 
 from core.database import get_application_collection
-from api.dependencies import DBSession, CurrentUser
+# UPDATED: Import get_current_user directly (CurrentUser alias was removed from dependencies.py)
+from api.dependencies import DBSession, get_current_user
 from models.application import ApplicationModel, VerificationReport
-from models.user import UserModel  # Used for CurrentUser type hinting
+from models.user import UserModel  # Used for type hinting
 
 router = APIRouter()
 
@@ -17,7 +20,8 @@ router = APIRouter()
 )
 async def get_verification_report(
         application_id: str,
-        current_user: Annotated[UserModel, Depends(CurrentUser)],
+        # CORRECTED DEPENDENCY: Use the function directly with Depends(get_current_user)
+        current_user: Annotated[UserModel, Depends(get_current_user)],
         db_client: DBSession,
 ):
     """
@@ -42,8 +46,8 @@ async def get_verification_report(
     # Convert the document to the full ApplicationModel for status check
     application = ApplicationModel(**app_doc)
 
-    # Check if verification is complete
-    if application.status in ["submitted", "verifying"]:
+    # UPDATED STATUS CHECK: Added "initial_application" to indicate report is not ready yet.
+    if application.status in ["initial_application", "verifying"]:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Verification for this application is still in progress. Current status: {application.status}"

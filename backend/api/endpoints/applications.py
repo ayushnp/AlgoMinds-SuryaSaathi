@@ -1,6 +1,8 @@
+# In backend/api/endpoints/applications.py
+
 import os
 from datetime import datetime
-from typing import Annotated, Dict, Any  # Added Dict, Any for app_doc typing
+from typing import Annotated, Dict, Any
 
 from fastapi import APIRouter, HTTPException, status, Depends, BackgroundTasks, Form, UploadFile
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -9,9 +11,9 @@ from bson import ObjectId
 # --- CORE IMPORTS ---
 from core.database import get_application_collection
 from core.config import settings
-from api.dependencies import DBSession, CurrentUser
+# UPDATED: Import get_current_user function directly (CurrentUser alias was removed/deprecated)
+from api.dependencies import DBSession, get_current_user
 from models.user import UserModel, PyObjectId
-# CORRECTED IMPORT: Import the new model InitialApplicationCreate
 from models.application import ApplicationModel, InitialApplicationCreate, PhotoMetadata
 from services.ml_pipeline import run_verification_pipeline
 from services.storage import save_uploaded_files, get_storage_path
@@ -23,8 +25,9 @@ router = APIRouter()
 
 @router.post("/apply", status_code=status.HTTP_201_CREATED)
 async def initial_application(
-        user_in: InitialApplicationCreate,  # Uses the detailed Pydantic model
-        current_user: CurrentUser,
+        user_in: InitialApplicationCreate,
+        # FIXED DEPENDENCY: Use Annotated with Depends(get_current_user)
+        current_user: Annotated[UserModel, Depends(get_current_user)],
         db_client: DBSession,
 ):
     """
@@ -34,7 +37,7 @@ async def initial_application(
     app_collection = get_application_collection()
 
     # Create the Database Document with all detailed application information
-    app_doc: Dict[str, Any] = {  # Use Dict[str, Any] for flexibility
+    app_doc: Dict[str, Any] = {
         "user_id": current_user.id,
 
         # Details from the initial form
@@ -54,7 +57,7 @@ async def initial_application(
         "serial_number_photo": None,
         "inverter_photo": None,
 
-        "status": "initial_application",  # Set to initial status
+        "status": "initial_application",
         "submission_date": datetime.now().isoformat(),
         "verification_report": None,
     }
@@ -73,7 +76,8 @@ async def initial_application(
 @router.post("/submit", status_code=status.HTTP_202_ACCEPTED)
 async def submit_verification(
         background_tasks: BackgroundTasks,
-        current_user: CurrentUser,
+        # FIXED DEPENDENCY: Use Annotated with Depends(get_current_user)
+        current_user: Annotated[UserModel, Depends(get_current_user)],
         # The ID from the initial step is passed as a Form field (Crucial for matching)
         application_id: Annotated[str, Form()],
         # Final Verification Data
@@ -130,7 +134,6 @@ async def submit_verification(
         )
 
     # 3. Update the Database Document with new verification data
-    # Create PhotoMetadata objects for consistency, though the schema is permissive
     wide_photo_metadata = PhotoMetadata(s3_key=file_keys["wide_rooftop"])
     serial_photo_metadata = PhotoMetadata(s3_key=file_keys["serial_number"])
     inverter_photo_metadata = PhotoMetadata(s3_key=file_keys["inverter"])
@@ -171,7 +174,8 @@ async def submit_verification(
 @router.get("/{application_id}", response_model=ApplicationModel)
 async def get_application_details(
         application_id: str,
-        current_user: CurrentUser,
+        # FIXED DEPENDENCY: Use Annotated with Depends(get_current_user)
+        current_user: Annotated[UserModel, Depends(get_current_user)],
         db_client: DBSession,
 ):
     """
