@@ -42,13 +42,13 @@ origins = [
     "http://localhost",
     "http://localhost:8081",  # Standard Expo web port
     "http://127.0.0.1:8081",
+    # Add the specific IP address of your development machine if testing on a physical device over LAN
     # e.g., "http://192.168.1.10:8081"
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    # FIX: Use the explicit origins list instead of the wildcard ["*"]
-    allow_origins=origins, 
+    allow_origins=origins, # For development, use ["*"]. Replace with 'origins' list for production.
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
