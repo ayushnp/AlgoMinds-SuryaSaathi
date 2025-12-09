@@ -9,8 +9,8 @@ pymongo
 
 # Authentication & Security
 python-jose[cryptography]
-passlib[bcrypt]
-bcrypt
+passlib[argon2]
+argon2-cffi
 
 # Configuration & Environment
 pydantic
@@ -20,7 +20,7 @@ python-dotenv
 # HTTP Client
 httpx
 
-# Computer Vision & ML (Windows-compatible versions)
+# Computer Vision & ML
 numpy
 opencv-python
 pillow
@@ -36,4 +36,5 @@ pytz
 # CORS Middleware
 starlette
 
+# Email validation for pydantic
 email-validator

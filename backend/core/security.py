@@ -8,48 +8,32 @@ from jose import JWTError, jwt
 
 from core.config import settings
 
-# bcrypt hashing context
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# ============================================================
+# PASSWORD HASHING CONTEXT (Argon2 – modern, secure, no limits)
+# ============================================================
+pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 # OAuth2 password token scheme
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/token")
 
 
 # ============================================================
-# PASSWORD HASHING + VERIFICATION (fixed and fully correct)
+# PASSWORD HASHING + VERIFICATION (simple, secure)
 # ============================================================
-
-def _truncate_for_bcrypt(password: str) -> str:
-    """
-    bcrypt only processes the first 72 bytes of a password.
-    This helper safely truncates long passwords and returns a UTF-8 string.
-    """
-
-    # Encode password to bytes
-    pw_bytes = password.encode("utf-8")
-
-    # Truncate to bcrypt max length
-    if len(pw_bytes) > 72:
-        pw_bytes = pw_bytes[:72]
-
-    # Decode back to string (bcrypt requires a string, not bytes)
-    return pw_bytes.decode("utf-8", errors="ignore")
-
 
 def get_password_hash(password: str) -> str:
     """
-    Hash a password using bcrypt with proper 72-byte truncation.
+    Hash a password using Argon2.
+    Argon2 has NO 72-byte limit like bcrypt.
     """
-    safe_pw = _truncate_for_bcrypt(password)
-    return pwd_context.hash(safe_pw)
+    return pwd_context.hash(password)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
-    Verify a password using bcrypt with proper truncation.
+    Verify a password using Argon2.
     """
-    safe_pw = _truncate_for_bcrypt(plain_password)
-    return pwd_context.verify(safe_pw, hashed_password)
+    return pwd_context.verify(plain_password, hashed_password)
 
 
 # ============================================================
