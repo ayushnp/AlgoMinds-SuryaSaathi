@@ -1,36 +1,24 @@
+# deliverables/pipeline_code/core/config.py
 import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pathlib import Path
 
-# Determine the base directory for relative path resolution
+# --- IMPORTANT: The parent of this file (core) is the base directory for imports ---
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 class Settings(BaseSettings):
     # Model configuration for loading .env file
+    # NOTE: You must place your actual .env file in the root of the repository
     model_config = SettingsConfigDict(env_file='.env', extra='ignore')
 
-    # --- Application Settings ---
-    PROJECT_NAME: str = "Surya Saathi Verification API"
-    VERSION: str = "1.0.0"
-    API_V1_STR: str = "/api/v1"
-
-    # --- MongoDB Settings ---
-    MONGO_DB_URI: str
-    MONGO_DB_NAME: str = "surya_saathi_db"
-
-    # --- JWT Security Settings ---
-    SECRET_KEY: str
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours for a mobile app session
-
     # --- External API Keys ---
-    SENTINEL_HUB_CLIENT_ID: str
-    SENTINEL_HUB_CLIENT_SECRET: str
-    NREL_PVWATTS_API_KEY: str
+    # These must be set in your .env file
+    SENTINEL_HUB_CLIENT_ID: str = "3909a0cb-b588-48c6-955d-43ca7cbea633"
+    SENTINEL_HUB_CLIENT_SECRET: str = "m2aDgwzNcigBAJ4oVHU7iRvfy0YfKXtt"
+
 
     # --- Storage Settings ---
-    # Using local path for simplicity, replace with S3 bucket details for production
     STORAGE_DIR: str = str(BASE_DIR / "storage")
 
     # --- Verification Weights (for Confidence Score) ---
@@ -47,5 +35,5 @@ class Settings(BaseSettings):
 # Instantiate settings
 settings = Settings()
 
-# Ensure storage directory exists
+# Ensure storage directory exists (for saving artefacts)
 os.makedirs(settings.STORAGE_DIR, exist_ok=True)
