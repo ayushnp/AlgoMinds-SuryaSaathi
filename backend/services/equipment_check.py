@@ -1,6 +1,6 @@
 # In backend/services/equipment_check.py
 
-import easyocr
+
 import io
 import cv2
 import numpy as np
@@ -19,6 +19,7 @@ def get_ocr_reader():
     Loads the EasyOCR reader only once, on first access, and caches the result.
     This prevents slow startup times.
     """
+    import easyocr
     try:
         # Load the reader only when this function is called
         return easyocr.Reader(['en'], gpu=False)  # Use gpu=True if CUDA is configured

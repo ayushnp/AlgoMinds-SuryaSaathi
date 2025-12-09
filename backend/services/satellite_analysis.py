@@ -8,7 +8,7 @@ from functools import lru_cache  # <-- NEW: Import lru_cache
 
 from pathlib import Path
 
-from ultralytics import YOLO
+
 
 from core.config import settings
 from models.application import MetricScore, SatelliteAnalysisResult
@@ -23,6 +23,7 @@ def get_yolo_model():
     Loads the YOLO model only once, on first access, and caches the result.
     This prevents memory spikes during application startup.
     """
+    from ultralytics import YOLO
     try:
         # Load your custom segmentation weights
         return YOLO(CUSTOM_MODEL_PATH)
