@@ -19,8 +19,19 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/token
 # --- Password Hashing Functions ---
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verifies a plain password against a hash."""
-    return pwd_context.verify(plain_password, hashed_password)
+    """
+    Verifies a plain password against a hash.
+    FIX: Applies the same 72-byte truncation logic for bcrypt consistency.
+    """
+    # 1. Encode the plain password string to bytes
+    plain_password_bytes = plain_password.encode('utf-8')
+
+    # 2. Truncate if necessary (72 bytes is the limit)
+    if len(plain_password_bytes) > 72:
+        plain_password_bytes = plain_password_bytes[:72]
+
+    # 3. Pass the potentially truncated bytes to the context's verify method
+    return pwd_context.verify(plain_password_bytes, hashed_password)
 
 
 def get_password_hash(password: str) -> str:
@@ -37,7 +48,6 @@ def get_password_hash(password: str) -> str:
         password_bytes = password_bytes[:72]
 
     # 3. Hash the byte string
-    # The traceback shows the call failing on the line that previously only called pwd_context.hash(password)
     return pwd_context.hash(password_bytes)
 
 
