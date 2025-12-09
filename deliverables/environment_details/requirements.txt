@@ -1,0 +1,40 @@
+# Core Web Framework
+fastapi
+uvicorn[standard]
+python-multipart
+
+# Database
+motor
+pymongo
+
+# Authentication & Security
+python-jose[cryptography]
+passlib[argon2]
+argon2-cffi
+
+# Configuration & Environment
+pydantic
+pydantic-settings
+python-dotenv
+
+# HTTP Client
+httpx
+
+# Computer Vision & ML
+numpy
+opencv-python
+pillow
+torch
+torchvision
+ultralytics
+easyocr
+
+# Solar Position Calculations
+pvlib
+pytz
+
+# CORS Middleware
+starlette
+
+# Email validation for pydantic
+email-validator

@@ -1,0 +1,35 @@
+# In DELIVERABLES/2_ENVIRONMENT_DETAILS/environment.yml
+
+name: surya_saathi_inference
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  # Core language and high-priority ML libs installed via Conda channels
+  - python=3.10
+  - numpy=2.2.6
+  - opencv-python=4.12.0.88
+  - pytorch=2.9.1
+  - torchvision=0.24.1
+  - pip
+  - pip:
+    # All remaining packages from requirements.txt
+    - fastapi==0.123.7
+    - uvicorn[standard]==0.38.0
+    - python-multipart==0.0.20
+    - motor==3.7.1
+    - pymongo==4.15.5
+    - python-jose[cryptography]==3.5.0
+    - passlib[argon2]==1.7.4
+    - pydantic==2.12.5
+    - pydantic-settings==2.12.0
+    - python-dotenv==1.2.1
+    - httpx==0.28.1
+    - pillow==12.0.0
+    - ultralytics==8.2.0
+    - easyocr==1.7.2
+    - pvlib==0.13.1
+    - pytz==2025.2
+    - starlette==0.50.0
+    - email-validator==2.3.0
