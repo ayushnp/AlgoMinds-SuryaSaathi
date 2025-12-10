@@ -31,7 +31,7 @@ async def register_user(
             detail="User with this email already exists"
         )
 
-    # Hash the password (Truncation handled in core/security.py)
+    # Hash the password (Truncation handled in utils/security.py)
     hashed_password = get_password_hash(user_in.password)
 
     # Create the user document

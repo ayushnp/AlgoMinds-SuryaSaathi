@@ -5,7 +5,7 @@ from pathlib import Path
 from fastapi import UploadFile
 from core.config import settings
 
-# Base storage directory defined in core/config.py
+# Base storage directory defined in utils/config.py
 BASE_STORAGE_PATH = Path(settings.STORAGE_DIR)
 
 

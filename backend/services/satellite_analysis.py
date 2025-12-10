@@ -14,7 +14,7 @@ from core.config import settings
 from models.application import MetricScore, SatelliteAnalysisResult
 
 # --- NEW: Lazy-loading function with caching ---
-CUSTOM_MODEL_PATH = "best.pt"
+CUSTOM_MODEL_PATH = "deliverables/trained_model_file/best.pt"
 
 
 @lru_cache
