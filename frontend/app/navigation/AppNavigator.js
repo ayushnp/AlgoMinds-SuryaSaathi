@@ -21,6 +21,15 @@ export default function AppNavigator() {
           headerStyle: { backgroundColor: '#FF9800' },
           headerTintColor: '#fff',
           headerTitleStyle: { fontWeight: 'bold' },
+          
+          // FIX A: Explicitly set boolean for back button visibility
+          headerBackTitleVisible: false, 
+
+          // FIX B: Explicitly set string for title alignment
+          headerTitleAlign: 'center', 
+
+          // FIX C: Explicitly set back button title to empty string 
+          headerBackTitle: '', 
         }}
       >
         <Stack.Screen
@@ -31,7 +40,8 @@ export default function AppNavigator() {
         <Stack.Screen
           name="Home"
           component={HomeScreen}
-          options={{ title: 'Suryamitra', headerLeft: null }}
+          // FIX D: Use function to return null for headerLeft
+          options={{ title: 'Suryamitra', headerLeft: () => null }}
         />
         {/* Step 1 Screen: Initial Application */}
         <Stack.Screen
