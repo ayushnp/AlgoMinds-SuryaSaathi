@@ -14,8 +14,8 @@ class Settings(BaseSettings):
 
     # --- External API Keys ---
     # These must be set in your .env file
-    SENTINEL_HUB_CLIENT_ID: str = "3909a0cb-b588-48c6-955d-43ca7cbea633"
-    SENTINEL_HUB_CLIENT_SECRET: str = "m2aDgwzNcigBAJ4oVHU7iRvfy0YfKXtt"
+    SENTINEL_HUB_CLIENT_ID: str = "9460c762-2837-45da-a2e7-2d5d59bb5ebd"
+    SENTINEL_HUB_CLIENT_SECRET: str = "42rw4bZGFAYAsqcz67sFbD0726bzDo5R"
 
 
     # --- Storage Settings ---

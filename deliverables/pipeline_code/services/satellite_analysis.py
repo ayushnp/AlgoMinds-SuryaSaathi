@@ -6,11 +6,12 @@ from typing import Tuple, Optional, Dict
 from functools import lru_cache
 from pathlib import Path
 from datetime import timedelta, datetime
+import json
 
 # --- SENTINEL HUB IMPORTS ---
 from sentinelhub import (
     SentinelHubSession, BBox, CRS, DataCollection, MimeType,
-    SHConfig, SentinelHubRequest, get_area_geom
+    SHConfig, SentinelHubRequest
 )
 from shapely.geometry import Point
 # --- END SENTINEL HUB IMPORTS ---
@@ -22,11 +23,12 @@ from models.application import SatelliteAnalysisResult, QCStatus
 # --- SENTINEL HUB CONSTANTS ---
 DATA_COLLECTION = DataCollection.SENTINEL2_L2A
 IMAGE_RESOLUTION_M = 10  # Sentinel-2 L2A is 10 meters per pixel for RGB/NIR bands
-MAX_CLOUD_COVERAGE = 20
+# FIX: MAX_CLOUD_COVERAGE changed to float 0.20 (20%) for API compatibility
+MAX_CLOUD_COVERAGE = 0.20
 
 # Buffer zone conversion (Core Objective 2)
 SQFT_TO_M2 = 0.092903
-# Radius is calculated from Area = pi * r^2 --> r = sqrt(Area / pi)
+# Radius is calculated from Area = pi * r^2 --> r = r = sqrt(Area / pi)
 TARGET_RADII_M = {
     1200: (1200 * SQFT_TO_M2 / np.pi) ** 0.5,  # ~5.95 meters
     2400: (2400 * SQFT_TO_M2 / np.pi) ** 0.5  # ~8.42 meters
@@ -37,19 +39,29 @@ TARGET_RADII_M = {
 
 
 # --- 1. AUTHENTICATION & SESSION MANAGEMENT ---
+
 @lru_cache
 def get_sh_session() -> SentinelHubSession:
     """
     Creates and caches the Sentinel Hub session.
     """
     config = SHConfig()
-    config.sh_client_id = settings.SENTINEL_HUB_CLIENT_ID
-    config.sh_client_secret = settings.SENTEL_HUB_CLIENT_SECRET
+
+    # Debugging code left in place
+    client_id = settings.SENTINEL_HUB_CLIENT_ID
+    client_secret = settings.SENTINEL_HUB_CLIENT_SECRET
+    print(f"DEBUG: Configured Client ID starts with: {client_id[:4]}...")
+    print(f"DEBUG: Configured Client Secret is present: {'True' if client_secret else 'False'}")
+
+    # Configuration for authentication
+    config.sh_client_id = client_id
+    config.sh_client_secret = client_secret
 
     if not config.sh_client_id or not config.sh_client_secret:
         raise ValueError("Sentinel Hub credentials are not configured.")
 
     try:
+        # We rely on SHConfig being picked up by SentinelHubSession()
         return SentinelHubSession(config=config)
     except Exception as e:
         print(f"Error during Sentinel Hub authentication: {e}")
@@ -57,14 +69,13 @@ def get_sh_session() -> SentinelHubSession:
 
 
 # --- 2. GEOMETRY UTILITY ---
-def get_bbox_from_point(lat: float, lon: float, buffer_radius_sqft: int) -> BBox:
+# FIX: Updated return type to include radius_m and logic to calculate image size
+def get_bbox_from_point(lat: float, lon: float, buffer_radius_sqft: int) -> Tuple[BBox, float]:
     """
     Calculates a small BBox that encompasses the required circular buffer.
+    Returns: BBox, radius_m
     """
     radius_m = TARGET_RADII_M.get(buffer_radius_sqft, TARGET_RADII_M[2400])
-
-    # Use WGS84 to define the point, then project to get the buffer.
-    # We use a simple degree approximation for the small buffer's extent.
 
     # Approximate degree change for the radius (simplified for small areas)
     lat_rad = np.radians(lat)
@@ -76,7 +87,8 @@ def get_bbox_from_point(lat: float, lon: float, buffer_radius_sqft: int) -> BBox
         lon + delta_lon, lat + delta_lat
     ]
 
-    return BBox(bbox=bbox_coords, crs=CRS.WGS84)
+    # FIX: Return both the BBox and the radius in meters
+    return BBox(bbox=bbox_coords, crs=CRS.WGS84), radius_m
 
 
 # --- 3. CORE EVALSCRIPT (The Math in the Cloud) ---
@@ -143,15 +155,19 @@ def fetch_sh_image(
     session = None
     try:
         session = get_sh_session()
-        bbox = get_bbox_from_point(lat, lon, buffer_radius_sqft)
+        # FIX: Unpack both BBox and radius_m
+        bbox, radius_m = get_bbox_from_point(lat, lon, buffer_radius_sqft)
 
-        # Determine the size in pixels, ensuring a minimum size for the API
-        size_x = int(bbox.get_width() / IMAGE_RESOLUTION_M)
-        size_y = int(bbox.get_height() / IMAGE_RESOLUTION_M)
-        size = [max(size_x, 100), max(size_y, 100)]
+        # FIX: Calculate size correctly using radius_m (2 * radius_m is the bounding box edge length in meters)
+        total_width_m = 2 * radius_m
+        total_height_m = 2 * radius_m
+
+        size_x = int(total_width_m / IMAGE_RESOLUTION_M)
+        size_y = int(total_height_m / IMAGE_RESOLUTION_M)
+        size = [max(size_x, 100), max(size_y, 100)]  # Enforce minimum 100x100 pixels
 
         request = SentinelHubRequest(
-            session=session,
+            # FIX: Removed 'session=session'
             evalscript=EVALSCRIPT_TRUE_COLOR_RGB_JPEG,
             input_data=[
                 SentinelHubRequest.input_data(
@@ -162,7 +178,8 @@ def fetch_sh_image(
                 )
             ],
             responses=[
-                SentinelHubRequest.output_response("default", MimeType.JPEG),
+                # FIX: Replaced MimeType.JPEG with MimeType.JPG
+                SentinelHubRequest.output_response("default", MimeType.JPG),
                 SentinelHubRequest.output_response("userdata", MimeType.JSON)  # Get metadata
             ],
             bbox=bbox,
@@ -196,6 +213,7 @@ def run_yolo_detection(image_content: bytes) -> Tuple[int, float, float, Optiona
     """
     YOLO_MODEL = get_yolo_model()
     if YOLO_MODEL is None:
+        # Return dummy values if model loading failed
         return 0, 0.0, 0.0, None
 
     nparr = np.frombuffer(image_content, np.uint8)
@@ -205,6 +223,7 @@ def run_yolo_detection(image_content: bytes) -> Tuple[int, float, float, Optiona
         return 0, 0.0, 0.0, None
 
     # Run inference
+    # YOLO for segmentation/detection
     results = YOLO_MODEL(image, verbose=False)
 
     panel_count = 0
@@ -216,8 +235,11 @@ def run_yolo_detection(image_content: bytes) -> Tuple[int, float, float, Optiona
     PIXEL_TO_SQM_FACTOR = IMAGE_RESOLUTION_M * IMAGE_RESOLUTION_M
 
     for r in results:
+        # Sum of the area of all detected masks in pixels
         if r.masks is not None:
-            total_pixel_area = r.masks.area().sum().item()
+            # Check if there are masks before trying to sum area
+            if r.masks.area is not None:
+                total_pixel_area = r.masks.area().sum().item()
 
         panel_boxes = r.boxes
         panel_count = len(panel_boxes)
@@ -229,7 +251,7 @@ def run_yolo_detection(image_content: bytes) -> Tuple[int, float, float, Optiona
             avg_confidence = 0.0
 
         # Create the audit artifact (overlay image)
-        im_with_boxes = r.plot()
+        im_with_boxes = r.plot(labels=False, conf=False)  # Plot without labels/conf for clean look
         is_success, buffer = cv2.imencode(".jpg", im_with_boxes)
         if is_success:
             overlay_image_bytes = buffer.tobytes()
@@ -251,52 +273,68 @@ async def satellite_verification(
     Orchestrates the complete satellite verification process and generates artifacts.
     """
 
-    submission_dt = datetime.fromisoformat(submission_date.split('T')[0])
+    # FIX: Use strptime to explicitly parse the DD-MM-YYYY format from the CSV.
+    try:
+        submission_dt = datetime.strptime(submission_date.split('T')[0], '%d-%m-%Y')
+    except ValueError as e:
+        # Fallback to ISO format parsing in case the CSV changed its format (YYYY-MM-DD)
+        try:
+            submission_dt = datetime.fromisoformat(submission_date.split('T')[0])
+        except ValueError:
+            # If both fail, raise the error to be caught by the main pipeline
+            raise ValueError(f"Date parsing failed for '{submission_date}'. Expected formats DD-MM-YYYY or YYYY-MM-DD.")
 
     # 7.1 Define Time Ranges
     # Pre-install: Look 6 months prior to submission date
     six_months_ago = (submission_dt - timedelta(days=180)).isoformat().split('T')[0]
-    pre_install_period = (six_months_ago, submission_date)
+    pre_install_period = (six_months_ago, submission_dt.isoformat().split('T')[0])
 
     # Post-install: Look from submission date up to now
-    post_install_period = (submission_date, datetime.now().isoformat().split('T')[0])
+    post_install_period = (submission_dt.isoformat().split('T')[0], datetime.now().isoformat().split('T')[0])
+
+    # NOTE ON BUFFERS (Core Objective 2 Logic):
+    FINAL_BUFFER_SQFT_USED = 1200
 
     # 7.2 Fetch Pre-install Image (2400 sq ft buffer)
     pre_content, pre_metadata = fetch_sh_image(lat, lon, pre_install_period, 2400)
 
-    # 7.3 Handle Image Fetch Failure
+    # 7.3 Handle Pre-install Image Fetch Failure
     if pre_content is None:
-        return SatelliteAnalysisResult(
-            score=0.0, details="Pre-installation image fetch failed. Likely heavy cloud cover or no data.",
-            pre_install_panel_count=0, post_install_panel_count=0, yolo_confidence=0.0,
-            pv_area_sqm_est=0.0, qc_status=QCStatus.NOT_VERIFIABLE, image_metadata={}
-        )
-
-    # 7.4 Run YOLO on Pre-install Image
-    pre_count, _, _, _ = run_yolo_detection(pre_content)
+        pre_count = 0
+    else:
+        # 7.4 Run YOLO on Pre-install Image
+        pre_count, _, _, _ = run_yolo_detection(pre_content)
 
     # 7.5 Fetch Post-install Image (1200 sq ft buffer - Core Objective 3)
-    post_content, post_metadata = fetch_sh_image(lat, lon, post_install_period, 1200)
+    post_content, post_metadata = fetch_sh_image(lat, lon, post_install_period, FINAL_BUFFER_SQFT_USED)
 
     # 7.6 Handle Post-install Image Failure
     if post_content is None:
+        # Cannot confirm installation without a post-install image.
         return SatelliteAnalysisResult(
             score=0.0, details="Post-installation image fetch failed. Cannot confirm installation.",
             pre_install_panel_count=pre_count, post_install_panel_count=0, yolo_confidence=0.0,
-            pv_area_sqm_est=0.0, qc_status=QCStatus.NOT_VERIFIABLE, image_metadata=pre_metadata
+            pv_area_sqm_est=0.0, qc_status=QCStatus.NOT_VERIFIABLE, image_metadata=pre_metadata,
+            final_buffer_sqft=FINAL_BUFFER_SQFT_USED, artifact_filename=""
         )
 
     # 7.7 Run YOLO on Post-install Image & Generate Artifact
     post_count, post_conf, post_area, overlay_image_bytes = run_yolo_detection(post_content)
 
     # --- ARTIFACT STORAGE (Core Objective 5) ---
+    artifact_filename = ""
     if overlay_image_bytes:
-        # Assume a storage service (like the one in services/storage.py) is available
-        # You would call a function here to save the image artifact.
-        # Example: save_artifact_to_storage(f"{sample_id}_overlay.jpg", overlay_image_bytes)
-        pass
+        # Save the audit artifact to the configured storage directory
+        artifact_filename = f"{sample_id}_{FINAL_BUFFER_SQFT_USED}sqft_overlay.jpg"
+        save_path = Path(settings.STORAGE_DIR) / artifact_filename
+        try:
+            with open(save_path, 'wb') as f:
+                f.write(overlay_image_bytes)
+        except Exception as e:
+            print(f"Error saving artifact {artifact_filename}: {e}")
+            artifact_filename = f"Error saving artifact: {e}"
 
-        # 7.8 Scoring Logic
+    # 7.8 Scoring Logic
     qc_status = QCStatus.VERIFIABLE
     pv_area_sqm_est = post_area
     score = 0.0
@@ -304,6 +342,7 @@ async def satellite_verification(
 
     if post_count == 0:
         score = 0.0
+        qc_status = QCStatus.NOT_VERIFIABLE  # Or NOT_PRESENT
         details = "YOLO detected NO panels in the post-installation image."
     elif pre_count > post_count:
         score = 0.1
@@ -332,5 +371,7 @@ async def satellite_verification(
         yolo_confidence=post_conf,
         pv_area_sqm_est=pv_area_sqm_est,
         qc_status=qc_status,
-        image_metadata=post_metadata
+        image_metadata=post_metadata,
+        final_buffer_sqft=FINAL_BUFFER_SQFT_USED,
+        artifact_filename=artifact_filename
     )
